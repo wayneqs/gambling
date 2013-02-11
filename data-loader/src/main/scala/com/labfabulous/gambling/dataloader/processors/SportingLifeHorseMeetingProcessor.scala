@@ -7,9 +7,9 @@ import com.labfabulous.gambling.dataloader.html.{InvalidDetailPage, DetailsExtra
 import com.labfabulous.gambling.dataloader.WebClient
 import org.joda.time.DateTime
 
-class SportingLifeHorseMeetingProcessor(htmlExtractor: DetailsExtractor) extends MeetingDetailsProcessor {
+class SportingLifeHorseMeetingProcessor(mongo: MongoClient, htmlExtractor: DetailsExtractor) extends MeetingDetailsProcessor {
   RegisterJodaTimeConversionHelpers()
-  private val dbCollection = MongoClient()("racing_data")("meetings")
+  private val dbCollection = mongo("racing_data")("meetings")
 
   private def newLink (url: String): Boolean = {
     val q = MongoDBObject("url" -> url)
@@ -40,8 +40,8 @@ class SportingLifeHorseMeetingProcessor(htmlExtractor: DetailsExtractor) extends
         println(s"ERROR (weird html): ${url}")
         success &= false
       }
-      case _: Throwable => {
-        println(s"ERROR (unexpected): ${url}")
+      case msg: Throwable => {
+        println(s"ERROR (unexpected): ${url}: ${msg}")
         success &= false
       }
     }

@@ -25,7 +25,7 @@ class SportingLifeRacePageCardExtractor extends DetailsExtractor {
     val ageText = fields.get(3).text().trim
     val ratingText = fields.get(7).text().trim
     val builder = MongoDBObject.newBuilder
-    builder += "horse" -> Player.getPlayer(fields.get(2))
+    builder += "horse" -> Player.getPlayer(fields.get(2)).dbObject
     builder += "bf" -> bf
     builder += "cw" -> (c || cd)
     builder += "dw" -> (d || cd)
@@ -35,8 +35,8 @@ class SportingLifeRacePageCardExtractor extends DetailsExtractor {
     builder += "odds" -> new Odds(fields.get(9).text().trim).frac
     builder += "rating" -> (if (ratingText == "") 0 else ratingText.toInt)
     builder += "weight" -> new Weight(fields.get(4).text().trim).lbs
-    builder += "jockey" -> Player.getPlayer(fields.get(6))
-    builder += "trainer" -> Player.getPlayer(fields.get(5))
+    builder += "jockey" -> Player.getPlayer(fields.get(6)).dbObject
+    builder += "trainer" -> Player.getPlayer(fields.get(5)).dbObject
     builder.result()
   }
 

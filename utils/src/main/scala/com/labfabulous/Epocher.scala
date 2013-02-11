@@ -1,8 +1,9 @@
 package com.labfabulous
 
+import org.joda.time.DateTime
+
 object Epocher {
-  def get() = {
-    import org.scala_tools.time.Imports._
-    new DateTime(2008, 01, 28, 0, 0)
+  def get(date: DateTime = new DateTime(2008, 01, 28, 0, 0)) = {
+    date
   }
 }

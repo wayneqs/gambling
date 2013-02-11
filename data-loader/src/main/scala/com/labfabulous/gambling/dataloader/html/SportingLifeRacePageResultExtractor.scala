@@ -14,11 +14,11 @@ class SportingLifeRacePageResultExtractor extends DetailsExtractor {
     val fields: Elements = elements.get(index).select("td")
     builder += "position" -> getPosition(fields.get(0))
     builder += "distance" -> fields.get(1).text()
-    builder += "horse" -> Player.getPlayer(fields.get(2))
-    builder += "trainer" -> Player.getPlayer(fields.get(3))
+    builder += "horse" -> Player.getPlayer(fields.get(2)).dbObject
+    builder += "trainer" -> Player.getPlayer(fields.get(3)).dbObject
     builder += "age" -> fields.get(4).text()
     builder += "weight" -> new Weight(fields.get(5).text()).lbs
-    builder += "jockey" -> Player.getPlayer(fields.get(6))
+    builder += "jockey" -> Player.getPlayer(fields.get(6)).dbObject
     builder += "odds" -> new Odds(fields.get(7).text()).frac
     builder.result()
   }

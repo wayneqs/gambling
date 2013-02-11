@@ -1,12 +1,11 @@
 import com.labfabulous.DayWorker.{OK, Start}
-import com.labfabulous.Work
 import com.mongodb.{BasicDBList, BasicDBObject}
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.MongoClient
 import org.joda.time.DateTime
 
-class HorseRater extends Work {
+class HorseRater {
   RegisterJodaTimeConversionHelpers()
   private val mongoClient = MongoClient()("racing_data")
 

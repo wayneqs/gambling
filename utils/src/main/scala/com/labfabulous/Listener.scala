@@ -1,13 +1,17 @@
 package com.labfabulous
 
-import akka.actor.Actor
-import com.labfabulous.Listener.OK
+import akka.actor.{ReceiveTimeout, Actor}
+import scala.concurrent.duration._
 
-object Listener {
-  case class OK()
-}
 class Listener extends Actor {
+  context.setReceiveTimeout(30 minutes)
+
   def receive = {
-    case OK =>
+    case ReceiveTimeout => {
+      // No progress within 15 seconds, ServiceUnavailable
+      println("Shutting down due to unavailable service")
+      context.system.shutdown()
+    }
+    case _ =>
   }
 }

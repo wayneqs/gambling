@@ -9,7 +9,7 @@ object App {
   def main(args: Array[String]) {
     val work = new HorseRater
     val listener = system.actorOf(Props[Listener], name = "rater-listener-actor")
-    val raterActor = system.actorOf(Props(new DayWorker(work)), name = "rater-actor")
-    raterActor.tell(Start("http://labfabulous.com/rating", Epocher.get()), listener)
+//    val raterActor = system.actorOf(Props(new DayWorker(work)), name = "rater-actor")
+//    raterActor.tell(Start("http://labfabulous.com/rating", Epocher.get()), listener)
   }
 }
