@@ -69,6 +69,7 @@ class PlayerProcessor(mongo: MongoClient, extractor: LinksExtractor) extends Act
         } else {
           if (response._1 == 200) {
             savePlayers(response._2)
+            sender ! Progress()
           }
         }
       } catch {

@@ -6,6 +6,7 @@ import com.mongodb.casbah.query.Imports._
 import com.labfabulous.gambling.dataloader.html.{InvalidDetailPage, DetailsExtractor}
 import com.labfabulous.gambling.dataloader.WebClient
 import org.joda.time.DateTime
+import com.labfabulous.DayWorker.{WorkFailed, WorkPartiallyDone}
 
 class SportingLifeHorseMeetingProcessor(mongo: MongoClient, htmlExtractor: DetailsExtractor) extends MeetingDetailsProcessor {
   RegisterJodaTimeConversionHelpers()
@@ -19,30 +20,34 @@ class SportingLifeHorseMeetingProcessor(mongo: MongoClient, htmlExtractor: Detai
     }
   }
 
-  def process(url: String, date: DateTime, category: String) {
+  def process(url: String, date: DateTime, category: String): (Boolean, String) = {
     try {
       if (newLink (url)) {
-        val response = WebClient.get(url)
-        if (WebClient.isError(response)) {
-          success &= false
-        } else {
-          val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date, "category" -> category)
-          if (response._1 == 200) {
-            dbObject += "race" -> htmlExtractor.extract(response._2)
-          } else if (response._1 == 404) {
+        val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date, "category" -> category)
+        WebClient.get(url) match {
+          case (200, response) =>
+            dbObject += "race" -> htmlExtractor.extract(response)
+            dbCollection += dbObject
+            (true, "OK")
+          case (404, response) =>
+            val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date, "category" -> category)
             dbObject += "race" -> "Link appears to be broken"
-          }
-          dbCollection += dbObject
+            dbCollection += dbObject
+            (true, s"Link broken: ${url}")
+          case (code: Int, response) =>
+            (false, "${targetUrl} => ${code} => ${response}")
         }
+      } else {
+        (true, s"OK")
       }
+
     } catch {
       case x: InvalidDetailPage => {
-        println(s"ERROR (weird html): ${url}")
-        success &= false
+        println()
+        (false, s"ERROR (weird html): ${url}")
       }
       case msg: Throwable => {
-        println(s"ERROR (unexpected): ${url}: ${msg}")
-        success &= false
+        (false, s"ERROR (unexpected): ${url}: ${msg}")
       }
     }
   }

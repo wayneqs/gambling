@@ -1,4 +1,4 @@
-import com.labfabulous.DayWorker.{OK, Start}
+import com.labfabulous.DayWorker.Start
 import com.mongodb.{BasicDBList, BasicDBObject}
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.commons.MongoDBObject
@@ -24,6 +24,5 @@ class HorseRater {
     ) {
       rate(runners)
     }
-    OK(msg, date)
   }
 }

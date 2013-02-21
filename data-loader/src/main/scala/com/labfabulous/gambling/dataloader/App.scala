@@ -14,7 +14,7 @@ object App {
   def main(args: Array[String]) {
 
     val epochDate = Epocher.get()
-    val listener = system.actorOf(Props[Listener], name="listener")
+    val listener = system.actorOf(Props(new Listener), name="listener")
 
     val raceCardProcessor = new SportingLifeHorseMeetingProcessor(MongoClient(), new SportingLifeRacePageCardExtractor)
     val meetingsPageProcessorProps = Props(new MeetingsPageProcessor(new SportingLifeRacesPageRaceLinkExtractor, raceCardProcessor))

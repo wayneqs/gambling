@@ -26,7 +26,21 @@ class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingD
   }
 
   def processRaces(raceUrls: List[String], date: DateTime, category: String) {
-    raceUrls.foreach(url => meetingDetailsProcessor.process(url, date, category))
+    raceUrls.forall(url => {
+      meetingDetailsProcessor.process(url, date, category) match {
+        case (true, message) =>
+          if (message != "OK") println(message)
+          sender ! Progress()
+          true
+        case (false, message) =>
+          println(message)
+          sender ! Progress()
+          false
+      }
+    }) match {
+      case true => sender ! WorkDone(category, date)
+      case _ => sender ! WorkFailed(category, date, "not all urls were processed for date ${date}")
+      }
   }
 
   def today = {
@@ -37,9 +51,9 @@ class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingD
     val targetUrl = msg.baseUrl + date.toString("dd-MM-yyyy")
     if (date <= (today + 1.day)) {
       WebClient.get(targetUrl) match {
-        case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), date, msg.baseUrl)
+        case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), date, msg.category)
         case (404, response) => sender ! WorkPartiallyDone(msg.category, date, "${targetUrl} => 404")
-        case (code: Int, response) => WorkFailed(msg.category, date, "${targetUrl} => ${code} => ${response}")
+        case (code: Int, response) => sender ! WorkFailed(msg.category, date, "${targetUrl} => ${code} => ${response}")
       }
     }
   }
