@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit
 import com.labfabulous.DayWorker._
 import com.labfabulous.DayWorker.WorkForDate
 import akka.actor.OneForOneStrategy
-import com.labfabulous.DayWorker.Start
 import com.labfabulous.DayWorker.WorkFailed
 
 class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingDetailsProcessor: MeetingDetailsProcessor) extends Actor {
@@ -47,22 +46,18 @@ class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingD
     DateTime.now().withHour(0).withMinute(0).withMillisOfDay(0)
   }
 
-  def fillForDate(msg: Start, date: DateTime) {
-    val targetUrl = msg.baseUrl + date.toString("dd-MM-yyyy")
-    if (date <= (today + 1.day)) {
+  def doWork(work: WorkForDate) {
+    val targetUrl = work.start.state + work.date.toString("dd-MM-yyyy")
+    if (work.date <= (today + 1.day)) {
       WebClient.get(targetUrl) match {
-        case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), date, msg.category)
-        case (404, response) => sender ! WorkPartiallyDone(msg.category, date, "${targetUrl} => 404")
-        case (code: Int, response) => sender ! WorkFailed(msg.category, date, "${targetUrl} => ${code} => ${response}")
+        case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), work.date, work.start.category)
+        case (404, response) => sender ! WorkPartiallyDone(work.start.category, work.date, "${targetUrl} => 404")
+        case (code: Int, response) => sender ! WorkFailed(work.start.category, work.date, "${targetUrl} => ${code} => ${response}")
       }
     }
   }
 
-  def doWork(start: Start, date: DateTime) {
-    fillForDate(start, date)
-  }
-
   def receive = {
-    case work: WorkForDate => doWork(work.start, work.date)
+    case work: WorkForDate => doWork(work)
   }
 }

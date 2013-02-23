@@ -1,15 +1,15 @@
 import akka.actor.{Props, ActorSystem}
 import com.labfabulous.DayWorker.Start
 import com.labfabulous.{Listener, Epocher, DayWorker}
+import com.mongodb.casbah.MongoClient
 
 object App {
   val system = ActorSystem("rater-system")
 
-
   def main(args: Array[String]) {
-    val work = new HorseRater
+    val raterProps = Props(new HorseRater(MongoClient()))
     val listener = system.actorOf(Props[Listener], name = "rater-listener-actor")
-//    val raterActor = system.actorOf(Props(new DayWorker(work)), name = "rater-actor")
-//    raterActor.tell(Start("http://labfabulous.com/rating", Epocher.get()), listener)
+    val rater = system.actorOf(Props(new DayWorker(MongoClient(), raterProps)), name = "n-rater")
+    rater.tell(Start("n-rater", Epocher.get()), listener)
   }
 }

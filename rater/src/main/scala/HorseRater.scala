@@ -1,28 +1,29 @@
-import com.labfabulous.DayWorker.Start
+import akka.actor.Actor
+import com.labfabulous.DayWorker.WorkForDate
 import com.mongodb.{BasicDBList, BasicDBObject}
 import com.mongodb.casbah.commons.conversions.scala.RegisterJodaTimeConversionHelpers
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.MongoClient
-import org.joda.time.DateTime
 
-class HorseRater {
+class HorseRater(mongo: MongoClient) extends Actor {
   RegisterJodaTimeConversionHelpers()
-  private val mongoClient = MongoClient()("racing_data")
+  private val db = mongo("racing_data")
 
   def rate(runners: BasicDBList) {
   }
 
-  def doWork(msg: Start, date: DateTime) = {
+  def doWork(w: WorkForDate) = {
 
-    val meetingsCollection = mongoClient("meetings")
-    val q = MongoDBObject("url" -> """http://www\.sportinglife\.com/racing/results/.*""".r,
-                          "date" -> date)
-    for (
-      meeting <- meetingsCollection.find(q);
-      runners = meeting.get("race").asInstanceOf[BasicDBObject].get("runners").asInstanceOf[BasicDBList]
-      if runners.size() > 1 // we are not interested in races with a single runner
-    ) {
+    val meetingsCollection = db("meetings")
+    val q = MongoDBObject("category" -> "results", "date" -> w.date)
+    for (meeting <- meetingsCollection.find(q);
+         runners = meeting.get("race").asInstanceOf[BasicDBObject].get("runners").asInstanceOf[BasicDBList]
+         if runners.size() > 1) { // not interested in races where there is only a single runner
       rate(runners)
     }
+  }
+
+  def receive = {
+    case w: WorkForDate => doWork(w)
   }
 }

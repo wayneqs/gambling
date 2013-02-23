@@ -14,7 +14,7 @@ import akka.actor.SupervisorStrategy.{Escalate, Restart}
 import com.labfabulous.DayWorker.Start
 
 object DayWorker {
-  case class Start(baseUrl: String, category: String, epochDate: DateTime)
+  case class Start(category: String, epochDate: DateTime, state: String = "")
   case class WorkForDate(start: Start, date: DateTime)
   case class WorkDone(category: String, date: DateTime)
   case class WorkPartiallyDone(category: String, date: DateTime, message: String)

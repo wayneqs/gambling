@@ -58,7 +58,7 @@ class PlayerProcessor(mongo: MongoClient, extractor: LinksExtractor) extends Act
     savePlayersInRow(rows, 0)
   }
 
-  def doWork(msg: Start, date: DateTime) {
+  def doWork(work: WorkForDate) {
 
     def processLink(link: String) {
       try {
@@ -87,22 +87,20 @@ class PlayerProcessor(mongo: MongoClient, extractor: LinksExtractor) extends Act
     def processLinks(links: List[String]) {
       links.foreach(link => processLink(link))
       isOK match {
-        case true => sender ! WorkDone(msg.category, date)
-        case false => sender ! WorkFailed(msg.category, date, "one of the links failed")
+        case true => sender ! WorkDone(work.start.category, work.date)
+        case false => sender ! WorkFailed(work.start.category, work.date, "one of the links failed")
       }
     }
 
-    val targetUrl = msg.baseUrl + date.toString("dd-MM-yyyy")
+    val targetUrl = work.start.state + work.date.toString("dd-MM-yyyy")
     WebClient.get(targetUrl) match {
       case (200, response) => processLinks(extractor.extract(response))
-      case (404, response) => sender ! WorkPartiallyDone(msg.category, date, "${targetUrl} => 404")
-      case (code: Int, response) => WorkFailed(msg.category, date, "${targetUrl} => ${code} => ${response}")
+      case (404, response) => sender ! WorkPartiallyDone(work.start.category, work.date, "${targetUrl} => 404")
+      case (code: Int, response) => WorkFailed(work.start.category, work.date, "${targetUrl} => ${code} => ${response}")
     }
   }
 
   def receive = {
-    case work: WorkForDate => {
-      doWork(work.start, work.date)
-    }
+    case work: WorkForDate => doWork(work)
   }
 }
