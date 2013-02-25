@@ -1,12 +1,10 @@
 package com.labfabulous.gambling.dataloader.processors
 
 import com.labfabulous.DayWorker._
-import org.joda.time.DateTime
 import com.labfabulous.gambling.dataloader.WebClient
 import com.labfabulous.gambling.dataloader.html.{InvalidDetailPage, LinksExtractor}
 import com.mongodb.casbah.commons.MongoDBObject
 import org.jsoup.select.Elements
-import com.labfabulous.DayWorker.Start
 import com.mongodb.casbah.MongoClient
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element

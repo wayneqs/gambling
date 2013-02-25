@@ -13,6 +13,7 @@ import com.labfabulous.DayWorker._
 import com.labfabulous.DayWorker.WorkForDate
 import akka.actor.OneForOneStrategy
 import com.labfabulous.DayWorker.WorkFailed
+import dispatch.{as, url, Promise}
 
 class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingDetailsProcessor: MeetingDetailsProcessor) extends Actor {
   RegisterJodaTimeConversionHelpers()
@@ -24,7 +25,7 @@ class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingD
     }
   }
 
-  def processRaces(raceUrls: List[String], date: DateTime, category: String) {
+  def processRaces(raceUrls: List[String], date: LocalDate, category: String) {
     raceUrls.forall(url => {
       meetingDetailsProcessor.process(url, date, category) match {
         case (true, message) =>
@@ -43,17 +44,21 @@ class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingD
   }
 
   def today = {
-    DateTime.now().withHour(0).withMinute(0).withMillisOfDay(0)
+    LocalDate.now
   }
 
   def doWork(work: WorkForDate) {
+//    val promise: Promise[String] = Http(url(get.url) OK as.String)
+//    throttler.throttle(promise) match {
+//      case (200, response) => save(response, get)
+//      case (404, response) => println(s"ERROR: ${404} => ${get.url}")
+//      case (code: Int, response) => println(s"ERROR: code ${code} => ${get.url}")
+//    }
     val targetUrl = work.start.state + work.date.toString("dd-MM-yyyy")
-    if (work.date <= (today + 1.day)) {
-      WebClient.get(targetUrl) match {
-        case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), work.date, work.start.category)
-        case (404, response) => sender ! WorkPartiallyDone(work.start.category, work.date, "${targetUrl} => 404")
-        case (code: Int, response) => sender ! WorkFailed(work.start.category, work.date, "${targetUrl} => ${code} => ${response}")
-      }
+    WebClient.get(targetUrl) match {
+      case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), work.date, work.start.category)
+      case (404, response) => sender ! WorkPartiallyDone(work.start.category, work.date, "${targetUrl} => 404")
+      case (code: Int, response) => sender ! WorkFailed(work.start.category, work.date, "${targetUrl} => ${code} => ${response}")
     }
   }
 

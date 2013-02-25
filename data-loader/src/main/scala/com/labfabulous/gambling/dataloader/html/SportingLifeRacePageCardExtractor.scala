@@ -56,23 +56,14 @@ class SportingLifeRacePageCardExtractor extends DetailsExtractor {
       throw new InvalidDetailPage
     }
     val raceDetails = doc.select("title").text()
-    val header = doc.select(".racecard-header .content-header li")
-    def getGoingFromHeader = {
+    def getGoingFromHeader(header: Elements) = {
       val goingElement = header.select("li:contains(going)")
       if (goingElement.size() == 0) "<Unknown>" else goingElement.text().replaceAll("Going: ", "")
     }
 
-    def getSurfaceFromHeader = {
+    def getSurfaceFromHeader(header: Elements) = {
       val surfaceElement = header.select("li:contains(surface)")
       if (surfaceElement.size() == 0) "<Unknown>" else surfaceElement.text().replaceAll("Surface: ", "")
-    }
-
-    def getDistanceFromHeader = {
-      val Distance = """\((([^,]+),([^,]+)).*\).*|\((([^,]+))\).*""".r
-      header.text() match {  // it could be in either place which is a bit funky
-        case Distance(_,_,_,_:String,distance) => new Distance(distance)
-        case Distance(_:String,_,distance,_,_) => new Distance(distance)
-      }
     }
 
     def getRaceDetails: (String, String, String, String) = {
@@ -86,13 +77,15 @@ class SportingLifeRacePageCardExtractor extends DetailsExtractor {
       }
     }
 
-    val going = getGoingFromHeader
-    val surface = getSurfaceFromHeader
+    val header = getHeader(doc)
+    val going = getGoingFromHeader(header)
+    val surface = getSurfaceFromHeader(header)
     val (hour, minute, track, raceName) = getRaceDetails
 
     val builder = MongoDBObject.newBuilder
     builder += "name" -> raceName
-    builder += "distance" -> getDistanceFromHeader.furlongs
+    val distance: Option[Double] = getDistanceFromHeader(header).furlongs
+    builder += "distance" -> (if (distance.isEmpty) 0 else distance.get)
     builder += "going" -> going
     builder += "surface" -> surface
     builder += "time" -> s"${hour}:${minute}"

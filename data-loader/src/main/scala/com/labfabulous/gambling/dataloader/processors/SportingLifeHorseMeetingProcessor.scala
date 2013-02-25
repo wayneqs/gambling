@@ -5,8 +5,7 @@ import com.mongodb.casbah.MongoClient
 import com.mongodb.casbah.query.Imports._
 import com.labfabulous.gambling.dataloader.html.{InvalidDetailPage, DetailsExtractor}
 import com.labfabulous.gambling.dataloader.WebClient
-import org.joda.time.DateTime
-import com.labfabulous.DayWorker.{WorkFailed, WorkPartiallyDone}
+import org.joda.time.LocalDate
 
 class SportingLifeHorseMeetingProcessor(mongo: MongoClient, htmlExtractor: DetailsExtractor) extends MeetingDetailsProcessor {
   RegisterJodaTimeConversionHelpers()
@@ -20,17 +19,17 @@ class SportingLifeHorseMeetingProcessor(mongo: MongoClient, htmlExtractor: Detai
     }
   }
 
-  def process(url: String, date: DateTime, category: String): (Boolean, String) = {
+  def process(url: String, date: LocalDate, category: String): (Boolean, String) = {
     try {
       if (newLink (url)) {
-        val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date, "category" -> category)
+        val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date.toDateTimeAtStartOfDay, "category" -> category)
         WebClient.get(url) match {
           case (200, response) =>
             dbObject += "race" -> htmlExtractor.extract(response)
             dbCollection += dbObject
             (true, "OK")
           case (404, response) =>
-            val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date, "category" -> category)
+            val dbObject: DBObject = MongoDBObject("url" -> url, "date" -> date.toDateTimeAtStartOfDay, "category" -> category)
             dbObject += "race" -> "Link appears to be broken"
             dbCollection += dbObject
             (true, s"Link broken: ${url}")

@@ -1,9 +1,9 @@
 package com.labfabulous
 
-import org.joda.time.DateTime
+import org.joda.time.LocalDate
 
 object Epocher {
-  def get(date: DateTime = new DateTime(2008, 01, 28, 0, 0)) = {
-    date.toDateTimeISO
+  def get(date: LocalDate = new LocalDate(2007, 01, 01)) = {
+    date
   }
 }
