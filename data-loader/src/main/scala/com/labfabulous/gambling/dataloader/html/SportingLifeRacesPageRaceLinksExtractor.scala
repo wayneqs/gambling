@@ -4,7 +4,7 @@ import org.jsoup.Jsoup
 import collection.JavaConversions._
 import com.labfabulous.gambling.dataloader.SportingLife
 
-class SportingLifeRacesPageRaceLinkExtractor extends LinksExtractor {
+class SportingLifeRacesPageRaceLinksExtractor extends LinksExtractor {
 
   def extract(html: String): List[String] = {
     val doc = Jsoup.parse(html)

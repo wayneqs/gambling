@@ -13,7 +13,7 @@ object App {
 //    val rater = system.actorOf(Props(new DayWorker(MongoClient(), raterProps)), name = "n-rater")
 //    rater.tell(Start("n-rater", Epocher.get()), listener)
     val downloaderProps = Props(new Downloader(MongoClient(), new HttpThrottler[String]("")))
-    val listener = system.actorOf(Props[TimeOutListener], name = "rater-listener-actor")
+    val listener = system.actorOf(Props[ProgressListener], name = "rater-listener-actor")
     val dayWorker = system.actorOf(Props(new DayWorker(MongoClient(), downloaderProps)), name = "day-worker")
     new LinksExtractor
     dayWorker.tell(Get(), listener)

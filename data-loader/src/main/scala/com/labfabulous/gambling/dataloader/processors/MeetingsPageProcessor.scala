@@ -14,6 +14,7 @@ import com.labfabulous.DayWorker.WorkForDate
 import akka.actor.OneForOneStrategy
 import com.labfabulous.DayWorker.WorkFailed
 import dispatch.{as, url, Promise}
+import com.labfabulous.ProgressListener.Progress
 
 class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingDetailsProcessor: MeetingDetailsProcessor) extends Actor {
   RegisterJodaTimeConversionHelpers()
@@ -54,11 +55,11 @@ class MeetingsPageProcessor(meetingsPageLinksExtractor: LinksExtractor, meetingD
 //      case (404, response) => println(s"ERROR: ${404} => ${get.url}")
 //      case (code: Int, response) => println(s"ERROR: code ${code} => ${get.url}")
 //    }
-    val targetUrl = work.start.state + work.date.toString("dd-MM-yyyy")
+    val targetUrl = work.start.toString + work.date.toString("dd-MM-yyyy")
     WebClient.get(targetUrl) match {
-      case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), work.date, work.start.category)
-      case (404, response) => sender ! WorkPartiallyDone(work.start.category, work.date, "${targetUrl} => 404")
-      case (code: Int, response) => sender ! WorkFailed(work.start.category, work.date, "${targetUrl} => ${code} => ${response}")
+      case (200, response) => processRaces(meetingsPageLinksExtractor.extract(response), work.date, work.start.toString)
+      case (404, response) => sender ! WorkPartiallyDone(work.start.toString, work.date, "${targetUrl} => 404")
+      case (code: Int, response) => sender ! WorkFailed(work.start.toString, work.date, "${targetUrl} => ${code} => ${response}")
     }
   }
 

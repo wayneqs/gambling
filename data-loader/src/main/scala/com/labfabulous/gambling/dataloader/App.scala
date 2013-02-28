@@ -1,11 +1,12 @@
 package com.labfabulous.gambling.dataloader
 
-import html.{SportingLifeRacePageResultExtractor, SportingLifeRacePageCardExtractor, SportingLifeRacesPageRaceLinkExtractor}
-import processors.{MeetingsPageProcessor, SportingLifeHorseMeetingProcessor, PlayerProcessor}
+import html.SportingLifeRacesPageRaceLinksExtractor
+import processors.RaceDayDownloader
 import akka.actor.{Props, ActorSystem}
-import com.labfabulous.{DayWorker, TimeOutListener, Epocher}
+import com.labfabulous.{DayWorker, ProgressListener, Epocher}
 import com.labfabulous.DayWorker.Start
 import com.mongodb.casbah.MongoClient
+import com.labfabulous.http.{Downloader, HttpThrottler}
 
 object App {
 
@@ -14,20 +15,17 @@ object App {
   def main(args: Array[String]) {
 
     val epochDate = Epocher.get()
-    val listener = system.actorOf(Props(new TimeOutListener), name="listener")
+    val listener = system.actorOf(Props(new ProgressListener), name="listener")
 
-    val raceCardProcessor = new SportingLifeHorseMeetingProcessor(MongoClient(), new SportingLifeRacePageCardExtractor)
-    val meetingsPageProcessorProps = Props(new MeetingsPageProcessor(new SportingLifeRacesPageRaceLinkExtractor, raceCardProcessor))
-    val cardsExtractor = system.actorOf(Props(new DayWorker(MongoClient(), meetingsPageProcessorProps)), name="cards-extractor")
-    cardsExtractor.tell(Start("racecards", epochDate, "http://www.sportinglife.com/racing/racecards/"), listener)
+    val client: MongoClient = MongoClient()
+    val db = client("racing_data")
 
-    val resultProcessor = new SportingLifeHorseMeetingProcessor(MongoClient(), new SportingLifeRacePageResultExtractor)
-    val resultsPageExtractorProps = Props(new MeetingsPageProcessor(new SportingLifeRacesPageRaceLinkExtractor, resultProcessor))
-    val resultsExtractor = system.actorOf(Props(new DayWorker(MongoClient(), resultsPageExtractorProps)), name="results-extractor")
-    resultsExtractor.tell(Start("results", epochDate, "http://www.sportinglife.com/racing/results/"), listener)
+    val linksExtractor = new SportingLifeRacesPageRaceLinksExtractor
 
-    val playerProcessorProps = Props(new PlayerProcessor(MongoClient(), new SportingLifeRacesPageRaceLinkExtractor))
-    val playersExtractor = system.actorOf(Props(new DayWorker(MongoClient(), playerProcessorProps)), name="players-extractor")
-    playersExtractor.tell(Start("players", epochDate, "http://www.sportinglife.com/racing/results/"), listener)
+    val downloader = Props(new Downloader(new HttpThrottler[String]("")))
+    val downloadPath = s"${sys.env("HOME")}/var/gambling/downloads/web/"
+    val racingDayProcessor = Props(new RaceDayDownloader(db, downloader, "http://www.sportinglife.com/racing/racecards", downloadPath, linksExtractor.extract))
+    val cardsExtractor = system.actorOf(Props(new DayWorker(racingDayProcessor)), name="cards-extractor")
+    cardsExtractor.tell(Start(epochDate), listener)
   }
 }

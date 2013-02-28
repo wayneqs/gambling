@@ -13,6 +13,7 @@ import akka.actor.{OneForOneStrategy, Actor}
 import concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
 import akka.actor.SupervisorStrategy.{Escalate, Restart}
+import com.labfabulous.ProgressListener.Progress
 
 class PlayerProcessor(mongo: MongoClient, extractor: LinksExtractor) extends Actor {
   var isOK = true
@@ -85,16 +86,16 @@ class PlayerProcessor(mongo: MongoClient, extractor: LinksExtractor) extends Act
     def processLinks(links: List[String]) {
       links.foreach(link => processLink(link))
       isOK match {
-        case true => sender ! WorkDone(work.start.category, work.date)
-        case false => sender ! WorkFailed(work.start.category, work.date, "one of the links failed")
+        case true => sender ! WorkDone(work.start.toString, work.date)
+        case false => sender ! WorkFailed(work.start.toString, work.date, "one of the links failed")
       }
     }
 
-    val targetUrl = work.start.state + work.date.toString("dd-MM-yyyy")
+    val targetUrl = work.start.toString + work.date.toString("dd-MM-yyyy")
     WebClient.get(targetUrl) match {
       case (200, response) => processLinks(extractor.extract(response))
-      case (404, response) => sender ! WorkPartiallyDone(work.start.category, work.date, "${targetUrl} => 404")
-      case (code: Int, response) => WorkFailed(work.start.category, work.date, "${targetUrl} => ${code} => ${response}")
+      case (404, response) => sender ! WorkPartiallyDone(work.start.toString, work.date, "${targetUrl} => 404")
+      case (code: Int, response) => WorkFailed(work.start.toString, work.date, "${targetUrl} => ${code} => ${response}")
     }
   }
 
