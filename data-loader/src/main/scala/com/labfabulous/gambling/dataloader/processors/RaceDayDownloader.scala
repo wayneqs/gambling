@@ -5,8 +5,7 @@ import concurrent.duration.FiniteDuration
 import java.util.concurrent.TimeUnit
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import java.nio.file.{StandardOpenOption, Paths, Files}
-import org.bson.types.ObjectId
+import java.nio.file.Paths
 import com.mongodb.casbah.MongoDB
 import com.mongodb.casbah.commons.MongoDBObject
 import akka.actor.SupervisorStrategy.{Escalate, Restart}
@@ -18,11 +17,13 @@ import com.labfabulous.ProgressListener.Progress
 import com.labfabulous.http.Downloader.Get
 import scala.Some
 import akka.actor.OneForOneStrategy
+import com.labfabulous.FileCreator
 
 class RaceDayDownloader(db: MongoDB,
                         downloaderProps: Props,
                         baseUrl: String,
                         downloadDir: String,
+                        fileCreator: FileCreator,
                         extractor: (String => List[String])) extends Actor {
 
   override val supervisorStrategy = {
@@ -40,10 +41,8 @@ class RaceDayDownloader(db: MongoDB,
   def downloadAll(w: WorkForDate) {
     val raceDayUrl = s"""${baseUrl}/${w.date.toString("dd-MM-yyyy")}"""
     if (isNewUrl(raceDayUrl, x => x)) {
-      println(s"Doing: ${w.date.toString("dd-mm-yyyy")} ${raceDayUrl}")
+      println(s"Doing: ${raceDayUrl}")
       downloader ! Get(raceDayUrl, w.date)
-    } else {
-      println(s"Skipping: ${w.date.toString("dd-mm-yyyy")} ${raceDayUrl}")
     }
   }
 
@@ -68,15 +67,20 @@ class RaceDayDownloader(db: MongoDB,
     }
   }
 
-  private def checkForRaceDayCompletion(url: String, date: LocalDate) {
-    def raceDayProcessingComplete {
-      println(s"Done: ${date.toString("dd-mm-yyyy")} ${url}")
-      if (date < LocalDate.now) downloadIndex += MongoDBObject("id" -> url)
+  private def raceDayComplete(raceDayUrl: String, date: LocalDate) {
+    println(s"Done: ${raceDayUrl}")
+    atomic {
+      implicit txn =>
+        urlState.remove(raceDayUrl)
     }
+    if (date < LocalDate.now) downloadIndex += MongoDBObject("id" -> raceDayUrl)
+  }
+
+  private def checkForRaceDayCompletion(url: String, date: LocalDate) {
     atomic {
       implicit txn =>
         val tuple = urlState.get(url).get
-        if (tuple._1 == tuple._2()) raceDayProcessingComplete
+        if (tuple._1 == tuple._2()) raceDayComplete(url, date)
     }
   }
 
@@ -87,31 +91,36 @@ class RaceDayDownloader(db: MongoDB,
     }
     progressListener.get ! Progress()
   }
+
   private def gotRaceDay(g: Got) {
     val urls = extractor(g.content)
     atomic {
       implicit txn =>
         urlState += (g.url ->(urls.size, Ref(0)))
     }
-    urls foreach (url =>
-      if (isNewUrl(url)) {
-        downloader ! Get(url, g.date, Some(g.url))
-      } else {
-        increment(g.url)
-        checkForRaceDayCompletion(g.url, g.date)
-      })
+    urls.size match {
+      case 0 => raceDayComplete(g.url, g.date)
+      case _ => processUrls(g.url, g.date, urls)
+    }
   }
 
+  private def processUrls(raceDayUrl: String, date: LocalDate, raceUrls: List[String]) {
+    raceUrls foreach (url => {
+      if (isNewUrl(url)) {
+        downloader ! Get(url, date, Some(url))
+      } else {
+        increment(raceDayUrl)
+        checkForRaceDayCompletion(raceDayUrl, date)
+      }})
+  }
   private def gotRace(g: Got) {
     g.status match {
       case 200 =>
         val doc: Document = Jsoup.parse(g.content)
         val content = doc.getElementById("content")
-        val id = new ObjectId
-        val location = Paths.get(downloadDir, id.toString)
         try {
-          Files.write(location, content.text().getBytes, StandardOpenOption.CREATE)
-          downloadIndex += MongoDBObject("id" -> idFrom(g.url), "date" -> g.date.toDateTimeAtStartOfDay, "location" -> location.toString)
+          val savedLocation = fileCreator.create(Paths.get(downloadDir), content.text().getBytes)
+          downloadIndex += MongoDBObject("id" -> idFrom(g.url), "date" -> g.date.toDateTimeAtStartOfDay, "location" -> savedLocation.toString)
           if (g.tag.isDefined) increment(g.tag.get)
         } catch {
           case e: Exception => println(s"Failed to write ${g.url} to file system: ${e.getMessage}")
