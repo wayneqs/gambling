@@ -31,7 +31,7 @@ class DayWorker(childWorker: Props)  extends Actor {
   }
 
   def doWorkFromDate(msg: Start, date: LocalDate) {
-    if (date <= (LocalDate.now + 1.day)) {
+    if (date < LocalDate.now) {
       child.tell(WorkForDate(msg, date), self)
       doWorkFromDate(msg, (date + 1.day))
     }

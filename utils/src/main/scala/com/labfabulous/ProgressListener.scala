@@ -8,7 +8,7 @@ import org.joda.time.DateTime
 object ProgressListener {
   case class Progress()
 }
-class ProgressListener(timeOut: FiniteDuration = 15 minutes) extends Actor {
+class ProgressListener(timeOut: FiniteDuration = 10 minutes) extends Actor {
   context.setReceiveTimeout(timeOut)
 
   def receive = {
